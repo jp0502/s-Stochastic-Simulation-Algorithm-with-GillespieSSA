@@ -1,0 +1,149 @@
+---
+title: "MATH 4090 Assignment 3 Part B"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+date: "2023-04-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### By JongHoon Park 216865313 
+
+First, we initiate the GillespieSSA2 library.
+
+```{r}
+install.packages("GillespieSSA2",repos = "http://cran.us.r-project.org")
+
+library(GillespieSSA2)
+
+vignette("linear_chain", package="GillespieSSA2")
+```
+
+#Part a): Reproduce the original findings:
+
+This is a simple reproduction of the Linear Chain System vignette where M = 50.
+
+```{r}
+library(GillespieSSA2)
+sim_name <- "Linear Chain System"
+M <- 50
+params <- c(c = 1)
+final_time <- 5
+initial_state <- c(1000, rep(0, M)) 
+names(initial_state) <- paste0("x", seq_len(M+1))
+
+reactions <- lapply(
+  seq_len(M),
+  function(i) {
+    effect <- c(-1, 1)
+    names(effect) <- paste0("x", c(i, i + 1))
+    
+    reaction(paste0("c * x", i), effect)
+  }
+)
+
+set.seed(1)
+out <- ssa(
+  initial_state = initial_state,
+  reactions = reactions,
+  params = params,
+  final_time = final_time,
+  method = ssa_exact(),
+  sim_name = sim_name
+) 
+plot_ssa(out)
+
+```
+
+# Part b):  Execute the algorithms in the vignette and produce graphs for the system for 	M=10 and linearly decreasing reaction rates ci=(M-i+1)/(M+1), i=1, ..., M.
+
+First we re-define the value of M to 10 in line 78. 
+
+```{r}
+library(GillespieSSA2)
+sim_name <- "Linear Chain System"
+
+#Set M to 10:
+M <- 10
+#params <- c(c = 1)
+```
+
+Then, we redefine the parameters to account for the 10 chemical reactions. In line 36, we define the parameters for c1 to c10, calculated by the equation:
+
+$$
+c_i = \frac{M-i+1}{M+1}
+$$
+...to get the following values for c1 to c11:
+
+$$c1 = 0.9090,c2 = 0.8181,c3 = 0.7272,c4 = 0.6363,c5 = 0.5454,$$ 
+$$c6 = 0.4545,c7 = 0.3636,c8 = 0.2727, c9 = 0.1818,c10 = 0.09090,c11=0.04545$$ 
+...to which we use as the parameters. 
+
+
+```{r}
+
+#calculate c_i = (M-i+1)/M+1) for each i...
+params <- c( c1 = 0.9090,c2 = 0.8181,c3 = 0.7272,c4 = 0.6363,
+            c5 = 0.5454,c6 = 0.4545,c7 = 0.3636,c8 = 0.2727,
+            c9 = 0.1818,c10 = 0.09090)
+final_time <- 5
+initial_state <- c(x1 = 1000, x2=0,x3=0,x4=0,x5=0,x6=0,x7=0,x8=0,x9=0,x10=0,x11=0)
+
+# names(initial_state) <- paste0("species", seq_len(M+1))
+
+reactions <- list(
+  
+  reaction(~c1*x1,c(x1=-1,x2=+1), name = "reaction1"), 
+  reaction(~c2*x2,c(x2=-1,x3=+1), name = "reaction2"), 
+  reaction(~c3*x3,c(x3=-1,x4=+1), name = "reaction3"), 
+  reaction(~c4*x4,c(x4=-1,x5=+1), name = "reaction4"), 
+  reaction(~c5*x5,c(x5=-1,x6=+1), name = "reaction5"), 
+  reaction(~c6*x6,c(x6=-1,x7=+1), name = "reaction6"), 
+  reaction(~c7*x7,c(x7=-1,x8=+1), name = "reaction7"), 
+  reaction(~c8*x8,c(x8=-1,x9=+1), name = "reaction8"), 
+  reaction(~c9*x9,c(x9=-1,x10=+1), name = "reaction9"), 
+  reaction(~c10*x10,c(x10=-1,x11=+1), name = "reaction10")
+  
+
+  
+
+)
+
+
+```
+
+```{r}
+set.seed(1)
+out <- ssa(
+  initial_state = initial_state,
+  reactions = reactions,
+  params = params,
+  final_time = final_time,
+  method = ssa_exact(),
+  sim_name = sim_name
+)
+plot_ssa(out)
+```
+
+## Verbal Summary
+
+If we wish to simulate a stochastic simulation algorithm, we must define a procedure for constructing simulated trajectories of finite populations in continuous time. With this simulation, we are able to estimate the number of species or individuals X_i(t) at time t for population i, with initial state X_0 = x_0.
+
+The Linear Chain System can be used to solve this problem, where an LCS can be modeled as a series of M chain reactions with M+1 species. In this example, we have 10 chemical species and we wish to simulate the evolution of each species and the transition of population of x_1 to x_10 via the probability c1 to c10. 
+
+In the first part of this simulation where we set M=50, it is visible that due to the larger number of chemical reactions possible, all of the reactions after x_10 --> x11 are difficult to be seen. This result aligns with our pre-defined effect, where the values of the x_i decrease by 1, and x_i+1 increase by 1, until the x_1 population has been completely exhausted, and the only remaining populations are x_i, where i is not equal to 1. 
+
+Our effects are defined similarly in part 2, where the values of x_i decrease by 1, and x_i+1 increase by 1, as ordered chemical reactions from x_1 to x_10, with probabilities according to their propensities, c_i* x_i. 
+
+Visually, we see that chemical species of different types other than the 1st one briefly rising, then progressing over to the next chemical reactions, recursively evolving from the previous population. The population of first chemical species slowly decreases as the master chemical equation processes each reaction, until there are only S_10 species at time = 5. 
+
+This is a useful model of approximating the population of prey-predator ecosystems or modelling the chemical master equation of multiple reactions that are recursively dependent on its previous reaction and population. 
+
+
+
+
+
